@@ -142,23 +142,28 @@
       box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
     }
 
-    /* Notificación central de estado */
+    /* Rótulo de localización del nivel */
     #status-toast {
       position: absolute;
-      top: 50px;
+      top: 52px;
       left: 50%;
-      transform: translateX(-50%);
-      background: rgba(18, 8, 30, 0.92);
-      border: 1px solid #c084fc;
-      padding: 7px 16px;
+      transform: translateX(-50%) translateY(0);
+      background: rgba(18, 8, 32, 0.90);
+      border: 1px solid rgba(192, 132, 252, 0.65);
+      padding: 6px 20px;
       border-radius: 14px;
-      font-size: 13px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
       color: #f5d0fe;
       text-align: center;
       max-width: 90%;
       pointer-events: none;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-      transition: opacity 0.5s ease;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      filter: blur(6px);
+      transition: opacity 1.2s ease, filter 1.2s ease, transform 1.2s ease;
+      z-index: 25;
     }
 
     /* Controles táctiles virtuales */
@@ -576,7 +581,7 @@
       </div>
 
       <div id="status-toast">
-        ✨ ¡Bienvenida al Bosque! Recoge las 5 setitas para abrir el portal.
+        Los Arrabales del Bosque
       </div>
 
       <div id="touch-controls">
@@ -1046,10 +1051,32 @@
       renderCurrentDialogue();
     }
 
+    let toastTimer = null;
+    function showLocationBanner(text) {
+      if (toastTimer) clearTimeout(toastTimer);
+      statusToast.innerHTML = text;
+      // Mostrar nítido y en posición
+      statusToast.style.transition = 'none';
+      statusToast.style.opacity = '1';
+      statusToast.style.filter = 'blur(0px)';
+      statusToast.style.transform = 'translateX(-50%) translateY(0)';
+
+      void statusToast.offsetWidth; // Forzar reflow para aplicar transición
+      statusToast.style.transition = 'opacity 1.2s ease, filter 1.2s ease, transform 1.2s ease';
+
+      // Mantener 1 segundo y luego desvanecerse difuminado
+      toastTimer = setTimeout(() => {
+        statusToast.style.opacity = '0';
+        statusToast.style.filter = 'blur(8px)';
+        statusToast.style.transform = 'translateX(-50%) translateY(-6px)';
+      }, 1000);
+    }
+
     function endDialogueSequence() {
       dialogueOverlay.style.display = 'none';
       uiOverlay.style.display = 'flex';
       GAME.gameState = 'PLAYING';
+      showLocationBanner(LEVELS_CONFIG[GAME.currentLevelIndex].name);
     }
 
     // ==========================================
@@ -1060,7 +1087,6 @@
       {
         id: 1,
         name: 'Los Arrabales del Bosque',
-        welcomeMsg: '✨ ¡Bienvenida al Bosque! Recoge las 5 setitas para abrir el portal.',
         shroomName: 'Setitas Rojas:',
         shroomIcon: '🍄',
         shroomAsset: 'shroomRed',
@@ -1098,7 +1124,6 @@
       {
         id: 2,
         name: 'Las Cavernas de Cristal',
-        welcomeMsg: '✨ ¡Bienvenida a las Cavernas! Recoge las 5 setitas para abrir el portal.',
         shroomName: 'Setitas de Zafiro:',
         shroomIcon: '💎',
         shroomAsset: 'shroomBlue',
@@ -1135,7 +1160,6 @@
       {
         id: 3,
         name: 'El Santuario del Árbol Ancestral',
-        welcomeMsg: '✨ ¡Bienvenida al Santuario! Recoge las 5 setitas para el caldero.',
         shroomName: 'Setitas de Oro:',
         shroomIcon: '✨',
         shroomAsset: 'shroomPink',
@@ -1294,8 +1318,9 @@
       victoryModal.style.display = 'none';
       giftModal.style.display = 'none';
 
-      statusToast.innerHTML = lvl.welcomeMsg;
-      statusToast.style.opacity = '1';
+      if (GAME.gameState === 'PLAYING') {
+        showLocationBanner(lvl.name);
+      }
     }
 
     function initParticles() {
@@ -1436,17 +1461,6 @@
         WITCH.vy = 0;
         WITCH.onGround = true;
         addSparkles(WITCH.x, WITCH.y, 20, lvl.shroomColor);
-        statusToast.innerHTML = '✨ ¡La magia te ha rescatado!';
-        statusToast.style.opacity = '1';
-        setTimeout(() => {
-          if (GAME.mushroomsCollected >= 5) {
-            statusToast.innerHTML = GAME.currentLevelIndex === 2
-              ? '✨ ¡Las 5 Setitas de Oro recogidas! ¡El Caldero te espera!'
-              : `✨ ¡Las 5 ${lvl.shroomName.replace(':', '')} recogidas! ¡El Portal está ABIERTO!`;
-          } else {
-            statusToast.innerHTML = lvl.welcomeMsg;
-          }
-        }, 1500);
       }
 
       // 6. Recogida de Setas
@@ -1466,12 +1480,10 @@
 
             if (GAME.mushroomsCollected >= 5) {
               AUDIO.playPortalUnlock();
-              if (GAME.currentLevelIndex === 2) {
-                statusToast.innerHTML = '✨ ¡Las 5 Setitas de Oro recogidas! ¡El Caldero te espera!';
-              } else {
-                statusToast.innerHTML = `✨ ¡Las 5 ${lvl.shroomName.replace(':', '')} recogidas! ¡El Portal está ABIERTO!`;
-              }
-              statusToast.style.opacity = '1';
+              const portalMsg = GAME.currentLevelIndex === 2
+                ? '¡El Caldero Mágico te espera!'
+                : '¡Portal Mágico Abierto!';
+              showLocationBanner(portalMsg);
             }
           }
         }
