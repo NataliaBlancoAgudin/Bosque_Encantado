@@ -1,0 +1,30 @@
+{
+  "name": "El Bosque Secreto de Sara",
+  "short_name": "Aventura Sara",
+  "description": "Videojuego de aventuras y plataformas en el bosque mágico creado especialmente para Sara por su Amigo Invisible.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#06030a",
+  "theme_color": "#1a0b2e",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

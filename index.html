@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>El Regalo de Sara - Aventura en el Bosque</title>
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a0b2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Aventura Sara">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body {
+      background-color: #06030a;
+      color: #f7eaff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Contenedor del juego con ratio 16:9 */
+    #game-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw; /* 16:9 */
+      max-height: 100vh;
+      max-width: 177.78vh; /* 16:9 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      box-shadow: 0 0 60px rgba(179, 102, 255, 0.4);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: #0d0917;
+    }
+
+    /* Interfaz superpuesta (UI del juego) */
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: none; /* Se activa tras la intro */
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 12px 18px;
+      z-index: 20;
+    }
+
+    .ui-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-hud {
+      background: rgba(30, 14, 48, 0.88);
+      border: 1px solid #c084fc;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: #f3e8ff;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    .shroom-counter {
+      color: #fca5a5;
+      font-weight: 800;
+      transition: transform 0.2s;
+    }
+    .shroom-counter.pop {
+      transform: scale(1.3);
+      color: #fef08a;
+    }
+
+    .top-buttons {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .btn-action {
+      background: rgba(30, 14, 48, 0.85);
+      border: 1px solid #a855f7;
+      color: #f3e8ff;
+      padding: 6px 12px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.1s, background 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .btn-action:active {
+      transform: scale(0.92);
+    }
+
+    .btn-action.highlight {
+      background: linear-gradient(135deg, #9333ea, #6366f1);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+    }
+
+    /* Notificación central de estado */
+    #status-toast {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 8, 30, 0.92);
+      border: 1px solid #c084fc;
+      padding: 7px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      color: #f5d0fe;
+      text-align: center;
+      max-width: 90%;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      transition: opacity 0.5s ease;
+    }
+
+    /* Controles táctiles virtuales */
+    #touch-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+      padding-bottom: 6px;
+    }
+
+    .touch-dpad {
+      display: flex;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .touch-btn {
+      width: 58px;
+      height: 58px;
+      background: rgba(43, 21, 69, 0.82);
+      border: 2px solid rgba(192, 132, 252, 0.6);
+      border-radius: 50%;
+      color: #f3e8ff;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      touch-action: manipulation;
+      transition: transform 0.08s, background 0.1s;
+    }
+
+    .touch-btn.active, .touch-btn:active {
+      background: rgba(168, 85, 247, 0.92);
+      border-color: #f5d0fe;
+      transform: scale(0.92);
+    }
+
+    .touch-btn.jump-btn {
+      width: 68px;
+      height: 68px;
+      background: rgba(219, 39, 119, 0.8);
+      border-color: rgba(244, 114, 182, 0.7);
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      pointer-events: auto;
+    }
+
+    .touch-btn.jump-btn.active, .touch-btn.jump-btn:active {
+      background: rgba(236, 72, 153, 0.95);
+      border-color: #fbcfe8;
+      transform: scale(0.92);
+    }
+
+    /* ==========================================
+       PANTALLA DE INICIO (TITLE SCREEN)
+       ========================================== */
+    #title-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(32, 14, 52, 0.85) 0%, rgba(8, 4, 14, 0.96) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 50;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .title-banner {
+      margin-bottom: 24px;
+    }
+
+    .title-subtitle {
+      font-size: 13px;
+      color: #c084fc;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .title-main {
+      font-size: 34px;
+      font-weight: 900;
+      color: #fef08a;
+      letter-spacing: 1px;
+      text-shadow: 0 0 20px rgba(254, 240, 138, 0.45), 0 4px 8px rgba(0,0,0,0.6);
+      margin-bottom: 6px;
+    }
+
+    .title-dedication {
+      font-size: 14px;
+      color: #e9d5ff;
+      font-style: italic;
+    }
+
+    .btn-start-game {
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      border: 2px solid #f5d0fe;
+      color: #fff;
+      padding: 12px 32px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-start-game:active {
+      transform: scale(0.95);
+    }
+
+    .title-hint {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #a855f7;
+    }
+
+    /* ==========================================
+       SISTEMA DE DIÁLOGOS (RPG STYLE)
+       ========================================== */
+    #dialogue-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 3, 10, 0.55);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 16px 20px;
+      z-index: 40;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .dialogue-card {
+      width: 100%;
+      max-width: 580px;
+      background: linear-gradient(135deg, rgba(28, 12, 46, 0.96), rgba(16, 7, 28, 0.96));
+      border: 2px solid #c084fc;
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.8), 0 0 15px rgba(192, 132, 252, 0.25);
+      position: relative;
+    }
+
+    .dialogue-avatar-box {
+      width: 60px;
+      height: 60px;
+      min-width: 60px;
+      background: #110720;
+      border: 2px solid #a855f7;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+    }
+
+    .dialogue-avatar-canvas {
+      width: 56px;
+      height: 56px;
+      image-rendering: pixelated;
+    }
+
+    .dialogue-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .dialogue-speaker {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .dialogue-text {
+      font-size: 13.5px;
+      color: #f3e8ff;
+      line-height: 1.45;
+      min-height: 38px;
+    }
+
+    .dialogue-tap-hint {
+      position: absolute;
+      right: 16px;
+      bottom: 8px;
+      font-size: 11px;
+      color: #c084fc;
+      animation: pulseHint 1.2s infinite;
+    }
+
+    .btn-skip-dialogue {
+      position: absolute;
+      top: -34px;
+      right: 4px;
+      background: rgba(30, 14, 48, 0.85);
+      border: 1px solid #a855f7;
+      color: #e9d5ff;
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @keyframes pulseHint {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* ==========================================
+       MODALES DE TRANSICIÓN Y FINAL
+       ========================================== */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 4, 18, 0.88);
+      backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      z-index: 100;
+      padding: 16px;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, #24113b, #150926);
+      border: 2px solid #e879f9;
+      border-radius: 20px;
+      padding: 24px 30px;
+      max-width: 440px;
+      box-shadow: 0 0 35px rgba(232, 121, 249, 0.4);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      color: #fef08a;
+      margin-bottom: 12px;
+      font-weight: 800;
+      text-shadow: 0 0 10px rgba(254, 240, 138, 0.5);
+    }
+
+    .modal-desc {
+      font-size: 14px;
+      color: #e9d5ff;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .btn-modal {
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(236, 72, 153, 0.4);
+      transition: transform 0.1s;
+    }
+    .btn-modal:active {
+      transform: scale(0.94);
+    }
+
+    .btn-modal.secondary {
+      background: rgba(45, 20, 75, 0.85);
+      border: 1px solid #c084fc;
+      box-shadow: none;
+    }
+
+    /* Pergamino Mágico Final (Completamente limpio, sin emoticonos) */
+    .parchment-card {
+      background: linear-gradient(145deg, #fef3c7, #fde68a);
+      border: 4px solid #b45309;
+      border-radius: 22px;
+      padding: 28px 34px;
+      max-width: 480px;
+      color: #451a03;
+      box-shadow: 0 0 50px rgba(251, 191, 36, 0.55), inset 0 0 20px rgba(217, 119, 6, 0.2);
+      text-align: center;
+    }
+
+    .parchment-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #78350f;
+      margin-bottom: 16px;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+      letter-spacing: 0.5px;
+    }
+
+    .parchment-body {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #78350f;
+      margin-bottom: 22px;
+    }
+
+    .parchment-signature {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #92400e;
+      font-style: italic;
+      margin-bottom: 22px;
+    }
+
+    .btn-parchment {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      color: #fff;
+      border: none;
+      padding: 10px 26px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(180, 83, 9, 0.35);
+      transition: transform 0.1s;
+    }
+    .btn-parchment:active {
+      transform: scale(0.94);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-wrapper">
+    <canvas id="gameCanvas" width="640" height="360"></canvas>
+
+    <!-- PANTALLA DE INICIO (INTRODUCCIÓN) -->
+    <div id="title-screen">
+      <div class="title-banner">
+        <div class="title-subtitle">Aventura de Amigo Invisible</div>
+        <div class="title-main">El Bosque Secreto de Sara</div>
+        <div class="title-dedication">Un regalo mágico creado especialmente para ti</div>
+      </div>
+      <button id="btnStartGame" class="btn-start-game">Comenzar Aventura</button>
+      <div class="title-hint">Toca la pantalla o pulsa el botón para jugar</div>
+    </div>
+
+    <!-- SISTEMA DE DIÁLOGOS (NOVELA VISUAL / RPG) -->
+    <div id="dialogue-overlay">
+      <div class="dialogue-card">
+        <button id="btnSkipDialogue" class="btn-skip-dialogue">Omitir</button>
+        <div class="dialogue-avatar-box">
+          <canvas id="dialogueAvatarCanvas" class="dialogue-avatar-canvas" width="56" height="56"></canvas>
+        </div>
+        <div class="dialogue-content">
+          <div id="dialogueSpeaker" class="dialogue-speaker">Bruja del Bosque</div>
+          <div id="dialogueText" class="dialogue-text">...</div>
+        </div>
+        <div class="dialogue-tap-hint">Toca para continuar ▼</div>
+      </div>
+    </div>
+
+    <!-- INTERFAZ DEL JUEGO (HUD Y CONTROLES) -->
+    <div id="ui-overlay">
+      <div class="ui-top">
+        <div class="badge-hud">
+          <span id="levelBadgeText" style="font-weight: 700; color: #f5d0fe; margin-right: 8px;">Nivel 1</span>
+          <span style="opacity: 0.35; margin-right: 8px;">|</span>
+          <span id="shroomIcon">🍄</span>
+          <span id="shroomLabel">Setitas Rojas:</span>
+          <span id="shroomCount" class="shroom-counter">0 / 5</span>
+        </div>
+        <div class="top-buttons">
+          <button id="musicBtn" class="btn-action">
+            <span>🎵</span> Música
+          </button>
+          <button id="soundBtn" class="btn-action">
+            <span>🔊</span> Sonido
+          </button>
+          <button id="fullscreenBtn" class="btn-action highlight">
+            <span>⛶</span> Pantalla Completa
+          </button>
+        </div>
+      </div>
+
+      <div id="status-toast">
+        ✨ ¡Bienvenida al Bosque! Recoge las 5 setitas para abrir el portal.
+      </div>
+
+      <div id="touch-controls">
+        <div class="touch-dpad">
+          <button id="btnLeft" class="touch-btn">◄</button>
+          <button id="btnRight" class="touch-btn">►</button>
+        </div>
+        <button id="btnJump" class="touch-btn jump-btn">SALTAR</button>
+      </div>
+    </div>
+
+    <!-- Modal de Transición de Nivel (Niveles 1 y 2) -->
+    <div id="victory-modal" class="modal-overlay">
+      <div class="modal-card">
+        <div id="modalTitle" class="modal-title">¡Nivel 1 Superado!</div>
+        <div id="modalDesc" class="modal-desc">
+          ¡Has recolectado las 5 Setitas de Rubí! La brujita ha guardado el primer ingrediente en su morral. El portal se ha activado y te transporta hacia las Cavernas de Cristal...
+        </div>
+        <div class="modal-actions">
+          <button id="btnNextLevel" class="btn-modal">Continuar al Nivel 2 ➔</button>
+          <button id="btnReplay" class="btn-modal secondary">Repetir Nivel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERGAMINO FINAL (Sin emoticonos, elegante y con el mensaje de cariño) -->
+    <div id="gift-modal" class="modal-overlay">
+      <div class="parchment-card">
+        <div class="parchment-title">Enhorabuena, Sara</div>
+        <div class="parchment-body">
+          Has completado con valentía tu travesía por el bosque ancestral y reunido todos los ingredientes sagrados.<br><br>
+          La pócima del caldero se ha consumado con éxito.<br><br>
+          Este pequeño videojuego ha sido creado con muchísima ilusión y cariño especialmente para ti.<br><br>
+          Tu amigo invisible espera de corazón que hayas disfrutado de la aventura y que este detalle te guste mucho.
+        </div>
+        
+        <div class="parchment-signature">
+          Con todo el cariño del mundo, tu Amigo Invisible.
+        </div>
+
+        <div class="modal-actions">
+          <button id="btnReplayAll" class="btn-parchment">Jugar de nuevo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Elementos de la UI
+    const titleScreen = document.getElementById('title-screen');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const uiOverlay = document.getElementById('ui-overlay');
+    const dialogueOverlay = document.getElementById('dialogue-overlay');
+    const dialogueAvatarCanvas = document.getElementById('dialogueAvatarCanvas');
+    const avatarCtx = dialogueAvatarCanvas.getContext('2d');
+    const dialogueSpeaker = document.getElementById('dialogueSpeaker');
+    const dialogueText = document.getElementById('dialogueText');
+    const btnSkipDialogue = document.getElementById('btnSkipDialogue');
+
+    const shroomIconEl = document.getElementById('shroomIcon');
+    const shroomLabelEl = document.getElementById('shroomLabel');
+    const shroomCountEl = document.getElementById('shroomCount');
+    const levelBadgeText = document.getElementById('levelBadgeText');
+    const statusToast = document.getElementById('status-toast');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const soundBtn = document.getElementById('soundBtn');
+    const musicBtn = document.getElementById('musicBtn');
+    
+    // Modales
+    const victoryModal = document.getElementById('victory-modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const btnNextLevel = document.getElementById('btnNextLevel');
+    const btnReplay = document.getElementById('btnReplay');
+    const giftModal = document.getElementById('gift-modal');
+    const btnReplayAll = document.getElementById('btnReplayAll');
+
+    ctx.imageSmoothingEnabled = false;
+    avatarCtx.imageSmoothingEnabled = false;
+
+    // ==========================================
+    // SISTEMA DE AUDIO (Web Audio API)
+    // ==========================================
+    const AUDIO = {
+      ctx: null,
+      sfxEnabled: true,
+      musicEnabled: true,
+      musicPlaying: false,
+      step: 0,
+      chordIndex: 0,
+      timer: null,
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      startMusic() {
+        if (!this.musicEnabled || this.musicPlaying) return;
+        this.init();
+        if (!this.ctx) return;
+        this.musicPlaying = true;
+        this.scheduleNextBeat();
+      },
+
+      stopMusic() {
+        this.musicPlaying = false;
+        if (this.timer) clearTimeout(this.timer);
+      },
+
+      scheduleNextBeat() {
+        if (!this.musicPlaying || !this.musicEnabled) return;
+        this.playMusicStep();
+        this.timer = setTimeout(() => this.scheduleNextBeat(), 260);
+      },
+
+      playMusicStep() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        
+        const chordsL1 = [
+          [146.83, 220.00, 261.63, 349.23],
+          [116.54, 233.08, 293.66, 349.23],
+          [130.81, 196.00, 261.63, 329.63],
+          [110.00, 220.00, 261.63, 329.63]
+        ];
+        const chordsL2 = [
+          [164.81, 246.94, 293.66, 392.00],
+          [130.81, 261.63, 329.63, 392.00],
+          [146.83, 220.00, 293.66, 369.99],
+          [123.47, 246.94, 293.66, 369.99]
+        ];
+        const chordsL3 = [
+          [174.61, 220.00, 261.63, 329.63],
+          [196.00, 246.94, 293.66, 392.00],
+          [164.81, 246.94, 329.63, 392.00],
+          [220.00, 261.63, 329.63, 440.00]
+        ];
+
+        let activeChords = chordsL1;
+        if (GAME.currentLevelIndex === 1) activeChords = chordsL2;
+        if (GAME.currentLevelIndex === 2) activeChords = chordsL3;
+
+        const melodyL1 = [587.33, 659.25, 698.46, 880.00, 783.99, 659.25, 587.33, 523.25];
+        const melodyL2 = [659.25, 783.99, 880.00, 987.77, 880.00, 783.99, 659.25, 587.33];
+        const melodyL3 = [659.25, 783.99, 880.00, 1046.50, 1174.66, 1046.50, 880.00, 783.99];
+
+        let activeMelody = melodyL1;
+        if (GAME.currentLevelIndex === 1) activeMelody = melodyL2;
+        if (GAME.currentLevelIndex === 2) activeMelody = melodyL3;
+
+        if (this.step % 16 === 0) {
+          const chord = activeChords[this.chordIndex % activeChords.length];
+          this.chordIndex++;
+          chord.forEach(freq => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(GAME.currentLevelIndex === 1 ? 750 : 600, now);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.026, now + 1.2);
+            gain.gain.linearRampToValueAtTime(0.001, now + 4.0);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 4.1);
+          });
+        }
+
+        if (this.step % 2 === 0 && Math.random() > 0.2) {
+          const noteFreq = activeMelody[(this.step / 2) % activeMelody.length];
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(noteFreq, now);
+
+          gain.gain.setValueAtTime(0.035, now);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.45);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.48);
+        }
+
+        this.step++;
+      },
+
+      playDialogBlip() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(780, now + 0.05);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      },
+
+      playJump() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(650, now + 0.16);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      },
+
+      playLand() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      },
+
+      playHeadBonk() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.1);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      },
+
+      playCollect() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [659.25, 987.77, 1318.51].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + idx * 0.06);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.22);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.24);
+        });
+      },
+
+      playPortalUnlock() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + idx * 0.1);
+          gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.36);
+        });
+      },
+
+      playVictory() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        [440, 554.37, 659.25, 880].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.12);
+          gain.gain.setValueAtTime(0.25, now + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.6);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.12);
+          osc.stop(now + idx * 0.12 + 0.65);
+        });
+      },
+
+      playCauldronBoil() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        for (let i = 0; i < 8; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          const t = now + i * 0.15;
+          const f = 200 + Math.random() * 300;
+          osc.frequency.setValueAtTime(f, t);
+          osc.frequency.exponentialRampToValueAtTime(f * 1.8, t + 0.1);
+          gain.gain.setValueAtTime(0.12, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        }
+      },
+
+      playGrandFanfare() {
+        if (!this.sfxEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+        notes.forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + idx * 0.14;
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.28, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.8);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.85);
+        });
+      }
+    };
+
+    // ==========================================
+    // GUIÓN DE DIÁLOGOS INICIALES (RPG)
+    // ==========================================
+    const DIALOGUES = [
+      {
+        speaker: 'Bruja del Bosque',
+        avatar: 'elder',
+        color: '#c084fc',
+        text: '¡Ah, bienvenida, joven Sara! Por fin has llegado. El bosque ha estado esperando este momento.'
+      },
+      {
+        speaker: 'Sara',
+        avatar: 'sara',
+        color: '#f472b6',
+        text: '¿Quién eres? ¿Dónde estamos? Parece un lugar salido de un cuento...'
+      },
+      {
+        speaker: 'Bruja del Bosque',
+        avatar: 'elder',
+        color: '#c084fc',
+        text: 'Soy la guardiana del bosque ancestral. Necesito tu ayuda con urgencia para preparar una pócima muy especial.'
+      },
+      {
+        speaker: 'Sara',
+        avatar: 'sara',
+        color: '#f472b6',
+        text: '¿Una pócima? ¿Para qué la necesitas?'
+      },
+      {
+        speaker: 'Bruja del Bosque',
+        avatar: 'elder',
+        color: '#c084fc',
+        text: 'Alguien muy especial me ha pedido preparar un sortilegio para ti, pero para completarlo necesitamos 15 setitas mágicas repartidas por el bosque.'
+      },
+      {
+        speaker: 'Bruja del Bosque',
+        avatar: 'elder',
+        color: '#c084fc',
+        text: 'Primero, 5 Setitas de Rubí en este sendero; luego, 5 de Zafiro en las cavernas; y finalmente, 5 de Oro en mi santuario. ¿Me ayudarás a encontrarlas?'
+      },
+      {
+        speaker: 'Sara',
+        avatar: 'sara',
+        color: '#f472b6',
+        text: '¡Cuenta conmigo! ¡Vamos a explorar el bosque!'
+      }
+    ];
+
+    let currentDialogueIndex = 0;
+
+    function startDialogueSequence() {
+      currentDialogueIndex = 0;
+      dialogueOverlay.style.display = 'flex';
+      renderCurrentDialogue();
+    }
+
+    function renderCurrentDialogue() {
+      if (currentDialogueIndex >= DIALOGUES.length) {
+        endDialogueSequence();
+        return;
+      }
+
+      const d = DIALOGUES[currentDialogueIndex];
+      AUDIO.playDialogBlip();
+      dialogueSpeaker.innerHTML = d.speaker;
+      dialogueSpeaker.style.color = d.color;
+      dialogueText.innerHTML = d.text;
+
+      // Dibujar retrato pixel art en el canvas del avatar
+      avatarCtx.clearRect(0, 0, 56, 56);
+      if (d.avatar === 'elder' && GAME.assets.elderWitch) {
+        // Bruja del bosque (witchFinal/blink.png)
+        avatarCtx.fillStyle = '#26123b';
+        avatarCtx.fillRect(0, 0, 56, 56);
+        // Dibujar frame 0
+        avatarCtx.drawImage(GAME.assets.elderWitch, 0, 0, 32, 36, 6, 4, 44, 49);
+      } else if (d.avatar === 'sara' && GAME.assets.witchIdle) {
+        // Brujita Sara (witch/idle.png)
+        avatarCtx.fillStyle = '#16193b';
+        avatarCtx.fillRect(0, 0, 56, 56);
+        avatarCtx.drawImage(GAME.assets.witchIdle, 0, 0, 150, 151, 4, 4, 48, 48);
+      }
+    }
+
+    function advanceDialogue() {
+      currentDialogueIndex++;
+      renderCurrentDialogue();
+    }
+
+    function endDialogueSequence() {
+      dialogueOverlay.style.display = 'none';
+      uiOverlay.style.display = 'flex';
+      GAME.gameState = 'PLAYING';
+    }
+
+    // ==========================================
+    // CONFIGURACIÓN DE LOS 3 NIVELES
+    // ==========================================
+    const LEVELS_CONFIG = [
+      // NIVEL 1: Los Arrabales del Bosque (Setitas Rojas de Rubí)
+      {
+        id: 1,
+        name: 'Los Arrabales del Bosque',
+        welcomeMsg: '✨ ¡Bienvenida al Bosque! Recoge las 5 setitas para abrir el portal.',
+        shroomName: 'Setitas Rojas:',
+        shroomIcon: '🍄',
+        shroomAsset: 'shroomRed',
+        shroomColor: '#f87171',
+        haloColor: 'rgba(248, 113, 113, 0.28)',
+        ambientColors: ['#f5d0fe', '#fca5a5', '#93c5fd'],
+        levelWidth: 2200,
+        blocks: [
+          { x: 0, y: 288, w: 480, h: 72 },
+          { x: 200, y: 216, w: 120, h: 32 },
+          { x: 360, y: 130, w: 80, h: 32 },
+          { x: 540, y: 288, w: 400, h: 72 },
+          { x: 620, y: 224, w: 80, h: 32 },
+          { x: 720, y: 160, w: 120, h: 32 },
+          { x: 1000, y: 288, w: 420, h: 72 },
+          { x: 1100, y: 256, w: 200, h: 32 },
+          { x: 1180, y: 224, w: 120, h: 32 },
+          { x: 1440, y: 288, w: 380, h: 72 },
+          { x: 1480, y: 208, w: 120, h: 32 },
+          { x: 1640, y: 150, w: 120, h: 32 },
+          { x: 1840, y: 288, w: 360, h: 72 },
+          { x: 1880, y: 216, w: 120, h: 32 }
+        ],
+        mushrooms: [
+          { id: 1, x: 260, y: 192, collected: false },
+          { id: 2, x: 780, y: 136, collected: false },
+          { id: 3, x: 1240, y: 200, collected: false },
+          { id: 4, x: 1540, y: 184, collected: false },
+          { id: 5, x: 1940, y: 192, collected: false }
+        ],
+        portal: { x: 2080, y: 288, w: 48, h: 68 }
+      },
+
+      // NIVEL 2: Las Cavernas de Cristal (Setas Azules de Zafiro con cavernas.jpg)
+      {
+        id: 2,
+        name: 'Las Cavernas de Cristal',
+        welcomeMsg: '✨ ¡Bienvenida a las Cavernas! Recoge las 5 setitas para abrir el portal.',
+        shroomName: 'Setitas de Zafiro:',
+        shroomIcon: '💎',
+        shroomAsset: 'shroomBlue',
+        shroomColor: '#38bdf8',
+        haloColor: 'rgba(56, 189, 248, 0.3)',
+        ambientColors: ['#67e8f9', '#93c5fd', '#c084fc'],
+        levelWidth: 2350,
+        blocks: [
+          { x: 0, y: 288, w: 440, h: 72 },
+          { x: 200, y: 216, w: 120, h: 32 },
+          { x: 480, y: 230, w: 80, h: 130 },
+          { x: 620, y: 180, w: 100, h: 180 },
+          { x: 780, y: 230, w: 80, h: 130 },
+          { x: 900, y: 288, w: 440, h: 72 },
+          { x: 960, y: 230, w: 80, h: 32 },
+          { x: 1060, y: 120, w: 100, h: 40 },
+          { x: 1140, y: 180, w: 120, h: 32 },
+          { x: 1380, y: 230, w: 80, h: 32 },
+          { x: 1480, y: 180, w: 80, h: 32 },
+          { x: 1580, y: 288, w: 770, h: 72 },
+          { x: 1840, y: 216, w: 140, h: 32 }
+        ],
+        mushrooms: [
+          { id: 1, x: 260, y: 192, collected: false },
+          { id: 2, x: 670, y: 156, collected: false },
+          { id: 3, x: 1200, y: 156, collected: false },
+          { id: 4, x: 1520, y: 156, collected: false },
+          { id: 5, x: 1910, y: 192, collected: false }
+        ],
+        portal: { x: 2180, y: 288, w: 48, h: 68 }
+      },
+
+      // NIVEL 3: El Árbol Ancestral y el Caldero Mágico (Setas de Oro Ancestral)
+      {
+        id: 3,
+        name: 'El Santuario del Árbol Ancestral',
+        welcomeMsg: '✨ ¡Bienvenida al Santuario! Recoge las 5 setitas para el caldero.',
+        shroomName: 'Setitas de Oro:',
+        shroomIcon: '✨',
+        shroomAsset: 'shroomPink',
+        shroomColor: '#fde047',
+        haloColor: 'rgba(253, 224, 71, 0.35)',
+        ambientColors: ['#fef08a', '#f59e0b', '#f472b6', '#e879f9'],
+        levelWidth: 2400,
+        blocks: [
+          { x: 0, y: 288, w: 440, h: 72 },
+          { x: 200, y: 216, w: 120, h: 32 },
+          { x: 360, y: 130, w: 80, h: 32 },
+          { x: 520, y: 288, w: 400, h: 72 },
+          { x: 620, y: 224, w: 80, h: 32 },
+          { x: 740, y: 160, w: 120, h: 32 },
+          { x: 1000, y: 288, w: 420, h: 72 },
+          { x: 1100, y: 256, w: 200, h: 32 },
+          { x: 1180, y: 210, w: 120, h: 32 },
+          { x: 1500, y: 220, w: 100, h: 32 },
+          { x: 1640, y: 160, w: 120, h: 32 },
+          { x: 1800, y: 288, w: 600, h: 72 },
+          { x: 1860, y: 216, w: 120, h: 32 }
+        ],
+        mushrooms: [
+          { id: 1, x: 260, y: 192, collected: false },
+          { id: 2, x: 800, y: 136, collected: false },
+          { id: 3, x: 1240, y: 186, collected: false },
+          { id: 4, x: 1700, y: 136, collected: false },
+          { id: 5, x: 1920, y: 192, collected: false }
+        ],
+        cauldron: { x: 2180, y: 288, w: 56, h: 44 }
+      }
+    ];
+
+    // ==========================================
+    // ESTADO DINÁMICO DEL JUEGO
+    // ==========================================
+    const GAME = {
+      width: 640,
+      height: 360,
+      gameState: 'TITLE', // 'TITLE' | 'DIALOGUE' | 'PLAYING'
+      currentLevelIndex: 0,
+      levelWidth: 2200,
+      cameraX: 0,
+      time: 0,
+      assets: {},
+      loaded: false,
+      levelCompleted: false,
+      mushroomsCollected: 0,
+      cauldronCutscene: false,
+      inputs: {
+        left: false,
+        right: false,
+        jump: false,
+        jumpPressed: false
+      },
+      particles: [],
+      sparkles: []
+    };
+
+    const ASSET_SOURCES = {
+      bg: 'assets_juego/background/background.png',
+      mg: 'assets_juego/background/middleground.png',
+      bgCavernas: 'assets_juego/background/cavernas.jpg',
+      dirt: 'assets_juego/background/dirt.png',
+      bloque: 'assets_juego/background/bloque.png',
+      witchIdle: 'assets_juego/witch/idle.png',
+      witchRun: 'assets_juego/witch/run.png',
+      witchJump: 'assets_juego/witch/jump.png',
+      elderWitch: 'assets_juego/witchFinal/witchpack/blink.png',
+      shroomRed: 'assets_juego/mushroom/AnimatedMushroomRed.png',
+      shroomBlue: 'assets_juego/mushroom/AnimatedMushroomBlue.png',
+      shroomPink: 'assets_juego/mushroom/AnimatedMushroomPink.png'
+    };
+
+    function loadAssets() {
+      const keys = Object.keys(ASSET_SOURCES);
+      return Promise.all(
+        keys.map(key => {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.src = ASSET_SOURCES[key];
+            img.onload = () => {
+              GAME.assets[key] = img;
+              resolve();
+            };
+            img.onerror = () => {
+              reject(new Error(`Fallo cargando asset: ${ASSET_SOURCES[key]}`));
+            };
+          });
+        })
+      );
+    }
+
+    // ==========================================
+    // BRUJITA JUGADORA Y FÍSICAS
+    // ==========================================
+    const WITCH = {
+      x: 80,
+      y: 288,
+      vx: 0,
+      vy: 0,
+      accel: 0.38,
+      friction: 0.22,
+      maxSpeed: 3.5,
+      gravity: 0.40,
+      jumpForce: -9.8,
+      onGround: true,
+      facingRight: true,
+
+      halfW: 12,
+      height: 48,
+
+      coyoteTimer: 0,
+      jumpBufferTimer: 0,
+
+      state: 'IDLE',
+      frameIndex: 0,
+      frameTimer: 0,
+
+      animations: {
+        idle: { frameW: 150, frameH: 151, frames: 8, speed: 7, renderH: 64, renderW: 64 },
+        run:  { frameW: 240, frameH: 300, frames: 8, speed: 5, renderH: 64, renderW: 52 },
+        jump: { frameW: 125, frameH: 170, frames: 8, speed: 6, renderH: 68, renderW: 52 }
+      }
+    };
+
+    function boxOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
+      return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+    }
+
+    function setLevel(index) {
+      GAME.currentLevelIndex = index;
+      const lvl = LEVELS_CONFIG[index];
+      GAME.levelWidth = lvl.levelWidth;
+      GAME.levelCompleted = false;
+      GAME.cauldronCutscene = false;
+      GAME.mushroomsCollected = 0;
+      lvl.mushrooms.forEach(m => m.collected = false);
+
+      WITCH.x = 80;
+      WITCH.y = 288;
+      WITCH.vx = 0;
+      WITCH.vy = 0;
+      WITCH.onGround = true;
+      WITCH.facingRight = true;
+      GAME.cameraX = 0;
+
+      shroomIconEl.innerHTML = lvl.shroomIcon;
+      shroomLabelEl.innerHTML = lvl.shroomName;
+      shroomCountEl.innerHTML = '0 / 5';
+      shroomCountEl.style.color = lvl.shroomColor;
+      levelBadgeText.innerHTML = `Nivel ${lvl.id}`;
+
+      initParticles();
+
+      victoryModal.style.display = 'none';
+      giftModal.style.display = 'none';
+
+      statusToast.innerHTML = lvl.welcomeMsg;
+      statusToast.style.opacity = '1';
+    }
+
+    function initParticles() {
+      GAME.particles = [];
+      const lvl = LEVELS_CONFIG[GAME.currentLevelIndex];
+      for (let i = 0; i < 36; i++) {
+        GAME.particles.push({
+          x: Math.random() * GAME.levelWidth,
+          y: Math.random() * GAME.height,
+          size: Math.random() * 2 + 1,
+          speedY: -(Math.random() * 0.3 + 0.1),
+          speedX: (Math.random() - 0.5) * 0.2,
+          opacity: Math.random() * 0.8 + 0.2,
+          color: lvl.ambientColors[Math.floor(Math.random() * lvl.ambientColors.length)]
+        });
+      }
+    }
+
+    function addSparkles(x, y, count, color = '#fbcfe8') {
+      for (let i = 0; i < count; i++) {
+        GAME.sparkles.push({
+          x: x + (Math.random() - 0.5) * 16,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 2.8,
+          vy: -(Math.random() * 2.5 + 0.6),
+          size: Math.random() * 2.5 + 1.2,
+          life: 1.0,
+          decay: Math.random() * 0.04 + 0.02,
+          color
+        });
+      }
+    }
+
+    function updateSparkles() {
+      for (let i = GAME.sparkles.length - 1; i >= 0; i--) {
+        const s = GAME.sparkles[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.life -= s.decay;
+        if (s.life <= 0) GAME.sparkles.splice(i, 1);
+      }
+    }
+
+    // ==========================================
+    // ACTUALIZACIÓN DE FÍSICAS (60 Hz FIXED)
+    // ==========================================
+    function updatePhysics() {
+      if (GAME.gameState !== 'PLAYING' || GAME.levelCompleted || GAME.cauldronCutscene) return;
+      const lvl = LEVELS_CONFIG[GAME.currentLevelIndex];
+
+      // 1. Movimiento Horizontal
+      if (GAME.inputs.left && !GAME.inputs.right) {
+        WITCH.vx -= WITCH.accel;
+        if (WITCH.vx < -WITCH.maxSpeed) WITCH.vx = -WITCH.maxSpeed;
+        WITCH.facingRight = false;
+      } else if (GAME.inputs.right && !GAME.inputs.left) {
+        WITCH.vx += WITCH.accel;
+        if (WITCH.vx > WITCH.maxSpeed) WITCH.vx = WITCH.maxSpeed;
+        WITCH.facingRight = true;
+      } else {
+        if (WITCH.vx > 0) WITCH.vx = Math.max(0, WITCH.vx - WITCH.friction);
+        else if (WITCH.vx < 0) WITCH.vx = Math.min(0, WITCH.vx + WITCH.friction);
+      }
+
+      WITCH.x += WITCH.vx;
+
+      // Colisiones horizontales
+      for (let bi = 0; bi < lvl.blocks.length; bi++) {
+        const b = lvl.blocks[bi];
+        if (boxOverlap(WITCH.x - WITCH.halfW, WITCH.y - WITCH.height + 2, WITCH.halfW * 2, WITCH.height - 4, b.x, b.y, b.w, b.h)) {
+          if (WITCH.vx > 0) WITCH.x = b.x - WITCH.halfW;
+          else if (WITCH.vx < 0) WITCH.x = b.x + b.w + WITCH.halfW;
+          WITCH.vx = 0;
+        }
+      }
+
+      if (WITCH.x < 16) { WITCH.x = 16; WITCH.vx = 0; }
+      else if (WITCH.x > GAME.levelWidth - 16) { WITCH.x = GAME.levelWidth - 16; WITCH.vx = 0; }
+
+      // 2. Coyote Time & Jump Buffer
+      if (WITCH.onGround) WITCH.coyoteTimer = 7;
+      else if (WITCH.coyoteTimer > 0) WITCH.coyoteTimer--;
+
+      if (GAME.inputs.jumpPressed) {
+        WITCH.jumpBufferTimer = 6;
+        GAME.inputs.jumpPressed = false;
+      } else if (WITCH.jumpBufferTimer > 0) WITCH.jumpBufferTimer--;
+
+      // 3. Salto
+      if (WITCH.jumpBufferTimer > 0 && (WITCH.onGround || WITCH.coyoteTimer > 0)) {
+        WITCH.vy = WITCH.jumpForce;
+        WITCH.onGround = false;
+        WITCH.coyoteTimer = 0;
+        WITCH.jumpBufferTimer = 0;
+        AUDIO.playJump();
+        addSparkles(WITCH.x, WITCH.y, 10, lvl.shroomColor);
+      }
+
+      if (!GAME.inputs.jump && WITCH.vy < -3) {
+        WITCH.vy *= 0.78;
+      }
+
+      // 4. Gravedad y Colisiones Verticales
+      const prevVy = WITCH.vy;
+      WITCH.vy += WITCH.gravity;
+      if (WITCH.vy > 9.5) WITCH.vy = 9.5;
+
+      WITCH.y += WITCH.vy;
+      let landed = false;
+
+      for (let bi = 0; bi < lvl.blocks.length; bi++) {
+        const b = lvl.blocks[bi];
+        if (boxOverlap(WITCH.x - WITCH.halfW + 2, WITCH.y - WITCH.height, WITCH.halfW * 2 - 4, WITCH.height, b.x, b.y, b.w, b.h)) {
+          if (WITCH.vy > 0) {
+            WITCH.y = b.y;
+            if (!WITCH.onGround && prevVy > 2.5) {
+              AUDIO.playLand();
+              addSparkles(WITCH.x, WITCH.y, 8, '#f5d0fe');
+            }
+            WITCH.vy = 0;
+            landed = true;
+          } else if (WITCH.vy < 0) {
+            WITCH.y = b.y + b.h + WITCH.height;
+            WITCH.vy = 0;
+            AUDIO.playHeadBonk();
+            addSparkles(WITCH.x, b.y + b.h, 6, '#e9d5ff');
+          }
+        }
+      }
+
+      WITCH.onGround = landed;
+
+      // 5. Rescate si cae en fosa
+      if (WITCH.y > GAME.height + 40) {
+        WITCH.x = Math.max(80, Math.floor((WITCH.x - 100) / 400) * 400 + 80);
+        WITCH.y = 288;
+        WITCH.vx = 0;
+        WITCH.vy = 0;
+        WITCH.onGround = true;
+        addSparkles(WITCH.x, WITCH.y, 20, lvl.shroomColor);
+        statusToast.innerHTML = '✨ ¡La magia te ha rescatado!';
+        statusToast.style.opacity = '1';
+        setTimeout(() => {
+          if (GAME.mushroomsCollected >= 5) {
+            statusToast.innerHTML = GAME.currentLevelIndex === 2
+              ? '✨ ¡Las 5 Setitas de Oro recogidas! ¡El Caldero te espera!'
+              : `✨ ¡Las 5 ${lvl.shroomName.replace(':', '')} recogidas! ¡El Portal está ABIERTO!`;
+          } else {
+            statusToast.innerHTML = lvl.welcomeMsg;
+          }
+        }, 1500);
+      }
+
+      // 6. Recogida de Setas
+      lvl.mushrooms.forEach(m => {
+        if (!m.collected) {
+          const dist = Math.hypot(WITCH.x - m.x, (WITCH.y - 24) - m.y);
+          if (dist < 34) {
+            m.collected = true;
+            GAME.mushroomsCollected++;
+            AUDIO.playCollect();
+            addSparkles(m.x, m.y, 18, lvl.shroomColor);
+            addSparkles(m.x, m.y, 10, '#fef08a');
+
+            shroomCountEl.innerHTML = `${GAME.mushroomsCollected} / 5`;
+            shroomCountEl.classList.add('pop');
+            setTimeout(() => shroomCountEl.classList.remove('pop'), 300);
+
+            if (GAME.mushroomsCollected >= 5) {
+              AUDIO.playPortalUnlock();
+              if (GAME.currentLevelIndex === 2) {
+                statusToast.innerHTML = '✨ ¡Las 5 Setitas de Oro recogidas! ¡El Caldero te espera!';
+              } else {
+                statusToast.innerHTML = `✨ ¡Las 5 ${lvl.shroomName.replace(':', '')} recogidas! ¡El Portal está ABIERTO!`;
+              }
+              statusToast.style.opacity = '1';
+            }
+          }
+        }
+      });
+
+      // 7. Llegada a la Meta
+      if (GAME.mushroomsCollected >= 5) {
+        if (lvl.portal) {
+          const distPortal = Math.abs(WITCH.x - lvl.portal.x);
+          if (distPortal < 28 && Math.abs(WITCH.y - lvl.portal.y) < 30) {
+            GAME.levelCompleted = true;
+            AUDIO.playVictory();
+            addSparkles(lvl.portal.x, lvl.portal.y - 30, 40, '#fef08a');
+
+            if (GAME.currentLevelIndex === 0) {
+              modalTitle.innerHTML = '¡Nivel 1 Superado!';
+              modalDesc.innerHTML = '¡Has recolectado las 5 Setitas de Rubí! La brujita ha guardado el primer ingrediente en su morral. El portal se ha activado y te transporta hacia las Cavernas de Cristal...';
+              btnNextLevel.innerHTML = 'Continuar al Nivel 2 ➔';
+            } else if (GAME.currentLevelIndex === 1) {
+              modalTitle.innerHTML = '¡Nivel 2 Superado!';
+              modalDesc.innerHTML = '¡Increíble! Has recolectado las 5 Setitas de Zafiro. Los cristales de las cavernas resuenan con tu magia. ¡Ya sólo queda el Nivel 3 para llegar al Gran Caldero de la Bruja Mayor!';
+              btnNextLevel.innerHTML = 'Continuar al Nivel 3 ➔';
+            }
+            victoryModal.style.display = 'flex';
+          }
+        } else if (lvl.cauldron) {
+          const distCauldron = Math.abs(WITCH.x - lvl.cauldron.x);
+          if (distCauldron < 38 && Math.abs(WITCH.y - lvl.cauldron.y) < 30) {
+            triggerCauldronCutscene();
+          }
+        }
+      }
+
+      updateAnimation();
+
+      // 8. Cámara suave
+      const targetCamX = WITCH.x - GAME.width * 0.38;
+      GAME.cameraX += (targetCamX - GAME.cameraX) * 0.085;
+      if (GAME.cameraX < 0) GAME.cameraX = 0;
+      if (GAME.cameraX > GAME.levelWidth - GAME.width) {
+        GAME.cameraX = GAME.levelWidth - GAME.width;
+      }
+    }
+
+    function triggerCauldronCutscene() {
+      GAME.cauldronCutscene = true;
+      WITCH.vx = 0;
+      WITCH.vy = 0;
+      WITCH.state = 'IDLE';
+      AUDIO.playCauldronBoil();
+
+      let burstCount = 0;
+      const interval = setInterval(() => {
+        burstCount++;
+        addSparkles(2180, 250, 15, ['#f87171', '#38bdf8', '#fde047', '#e879f9'][burstCount % 4]);
+        if (burstCount >= 14) {
+          clearInterval(interval);
+          AUDIO.playGrandFanfare();
+          setTimeout(() => {
+            giftModal.style.display = 'flex';
+          }, 600);
+        }
+      }, 150);
+    }
+
+    function updateAnimation() {
+      let newState = 'IDLE';
+      if (!WITCH.onGround) newState = 'JUMP';
+      else if (Math.abs(WITCH.vx) > 0.25) newState = 'RUN';
+      else newState = 'IDLE';
+
+      if (newState !== WITCH.state) {
+        WITCH.state = newState;
+        WITCH.frameIndex = 0;
+        WITCH.frameTimer = 0;
+      }
+
+      const animConfig = WITCH.animations[WITCH.state.toLowerCase()];
+      if (WITCH.state === 'JUMP') {
+        if (WITCH.vy < -2.5) WITCH.frameIndex = 1;
+        else if (WITCH.vy < 1.5) WITCH.frameIndex = 3;
+        else WITCH.frameIndex = 5;
+      } else {
+        WITCH.frameTimer++;
+        if (WITCH.frameTimer >= animConfig.speed) {
+          WITCH.frameTimer = 0;
+          WITCH.frameIndex = (WITCH.frameIndex + 1) % animConfig.frames;
+        }
+      }
+    }
+
+    // ==========================================
+    // RENDERIZADO (60 FPS OPTIMIZADO)
+    // ==========================================
+    function drawScene() {
+      const camX = Math.round(GAME.cameraX);
+      const lvl = LEVELS_CONFIG[GAME.currentLevelIndex];
+
+      // 1. Fondos con Parallax
+      const cBg = GAME.assets.bgCavernasOptimized || GAME.assets.bgCavernas;
+      if (GAME.currentLevelIndex === 1 && cBg) {
+        const cW = cBg.width;
+        const parallaxBgX = -(camX * 0.28) % cW;
+        for (let x = parallaxBgX - cW; x < GAME.width + cW; x += cW) {
+          ctx.drawImage(cBg, x, 0);
+        }
+      } else {
+        const bg = GAME.assets.bg;
+        if (bg) {
+          const bgScale = GAME.height / bg.height;
+          const bgW = bg.width * bgScale;
+          const parallaxBgX = -(camX * 0.15) % bgW;
+          for (let x = parallaxBgX - bgW; x < GAME.width + bgW; x += bgW) {
+            ctx.drawImage(bg, x, 0, bgW, GAME.height);
+          }
+        }
+
+        if (GAME.currentLevelIndex === 2) {
+          ctx.fillStyle = 'rgba(70, 20, 50, 0.35)';
+          ctx.fillRect(0, 0, GAME.width, GAME.height);
+        }
+
+        const mg = GAME.assets.mg;
+        if (mg) {
+          const mgScale = 1.35;
+          const mgW = mg.width * mgScale;
+          const mgH = mg.height * mgScale;
+          const mgY = GAME.height - mgH;
+          const parallaxMgX = -(camX * 0.4) % mgW;
+          for (let x = parallaxMgX - mgW; x < GAME.width + mgW; x += mgW) {
+            ctx.drawImage(mg, x, mgY, mgW, mgH);
+          }
+        }
+      }
+
+      // 2. Mundo con scroll
+      ctx.save();
+      ctx.translate(-camX, 0);
+
+      // Partículas ambientales optimizadas
+      for (let i = 0; i < GAME.particles.length; i++) {
+        const p = GAME.particles[i];
+        p.y += p.speedY;
+        p.x += p.speedX;
+        if (p.y < 0) {
+          p.y = GAME.height;
+          p.x = Math.random() * GAME.levelWidth;
+        }
+
+        if (p.x >= camX - 20 && p.x <= camX + GAME.width + 20) {
+          ctx.globalAlpha = p.opacity * (0.6 + 0.4 * Math.sin(GAME.time * 3 + p.x));
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Bloques de plataformas sólidas con Frustum Culling
+      const isLevel2 = (GAME.currentLevelIndex === 1);
+      const isLevel3 = (GAME.currentLevelIndex === 2);
+      let blockImg = GAME.assets.bloque;
+      let dirtImg = GAME.assets.dirt;
+
+      if (isLevel2) {
+        blockImg = GAME.assets.bloqueCristal || GAME.assets.bloque;
+        dirtImg = GAME.assets.dirtCristal || GAME.assets.dirt;
+      } else if (isLevel3) {
+        blockImg = GAME.assets.bloqueOro || GAME.assets.bloque;
+        dirtImg = GAME.assets.dirtOro || GAME.assets.dirt;
+      }
+
+      ctx.globalAlpha = 1.0;
+      for (let bi = 0; bi < lvl.blocks.length; bi++) {
+        const b = lvl.blocks[bi];
+        if (b.x + b.w < camX - 40 || b.x > camX + GAME.width + 40) continue;
+
+        const cols = Math.round(b.w / 40);
+        const rows = Math.round(b.h / 32);
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const bx = b.x + c * 40;
+            const by = b.y + r * 32;
+            if (bx + 40 < camX || bx > camX + GAME.width) continue;
+
+            if (r === 0 && blockImg) {
+              ctx.drawImage(blockImg, bx, by);
+            } else if (dirtImg) {
+              ctx.drawImage(dirtImg, bx, by);
+            }
+          }
+        }
+      }
+
+      // Dibujar Setitas Animadas
+      const shroomImg = GAME.assets[lvl.shroomAsset];
+      lvl.mushrooms.forEach(m => {
+        if (!m.collected && shroomImg) {
+          const animSpeed = 8;
+          const frameIdx = Math.floor(GAME.time * animSpeed + m.id) % 8;
+          const col = frameIdx % 3;
+          const row = Math.floor(frameIdx / 3);
+          const sx = col * 128;
+          const sy = row * 128;
+          const floatOffset = Math.sin(GAME.time * 3 + m.x) * 3;
+
+          ctx.save();
+          ctx.fillStyle = lvl.haloColor;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y + floatOffset, 18, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.drawImage(
+            shroomImg,
+            sx, sy, 128, 128,
+            m.x - 18, m.y - 18 + floatOffset, 36, 36
+          );
+          ctx.restore();
+        }
+      });
+
+      // Dibujar Meta
+      if (lvl.portal) {
+        drawPortal(lvl);
+      } else if (lvl.cauldron) {
+        drawCauldron(lvl.cauldron);
+      }
+
+      // Chispas mágicas
+      for (let si = 0; si < GAME.sparkles.length; si++) {
+        const s = GAME.sparkles[si];
+        ctx.globalAlpha = Math.max(0, s.life);
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // La Brujita Jugadora
+      drawWitch();
+
+      ctx.restore();
+    }
+
+    function drawPortal(lvl) {
+      const isUnlocked = GAME.mushroomsCollected >= 5;
+      const px = lvl.portal.x;
+      const py = lvl.portal.y;
+
+      ctx.save();
+
+      if (isUnlocked) {
+        const glow = Math.sin(GAME.time * 4) * 0.2 + 0.8;
+        ctx.fillStyle = `rgba(254, 240, 138, ${0.3 * glow})`;
+        ctx.beginPath();
+        ctx.ellipse(px, py - 34, 30, 42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = (GAME.currentLevelIndex === 1) ? '#67e8f9' : '#fde047';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(px, py - 34, 20, 34, Math.sin(GAME.time * 2) * 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = (GAME.currentLevelIndex === 1) ? '#38bdf8' : '#f472b6';
+        ctx.beginPath();
+        ctx.arc(px, py - 34, 8 + Math.sin(GAME.time * 6) * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PORTAL ABIERTO', px, py - 80);
+      } else {
+        ctx.fillStyle = 'rgba(76, 29, 149, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(px, py - 34, 24, 36, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#c084fc';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('5 Setas Requeridas', px, py - 74);
+      }
+
+      ctx.restore();
+    }
+
+    function drawCauldron(c) {
+      const isReady = GAME.mushroomsCollected >= 5;
+      const cx = c.x;
+      const cy = c.y;
+
+      ctx.save();
+
+      // Fuego mágico
+      const fireGlow = Math.sin(GAME.time * 8) * 4 + 14;
+      ctx.fillStyle = isReady ? 'rgba(251, 146, 60, 0.85)' : 'rgba(168, 85, 247, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 2, fireGlow, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Patas
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 20, cy - 14);
+      ctx.lineTo(cx - 24, cy);
+      ctx.moveTo(cx + 20, cy - 14);
+      ctx.lineTo(cx + 24, cy);
+      ctx.stroke();
+
+      // Cuerpo del caldero
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 18, 24, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#3f3f46';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Borde
+      ctx.fillStyle = '#27272a';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 30, 22, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Poción
+      const potionColor = isReady ? `hsl(${(GAME.time * 60) % 360}, 85%, 60%)` : '#a855f7';
+      ctx.fillStyle = potionColor;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 30, 19, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Burbujas
+      for (let i = 0; i < 4; i++) {
+        const bx = cx + Math.sin(GAME.time * 2 + i * 2) * 12;
+        const by = (cy - 30) - ((GAME.time * 25 + i * 15) % 35);
+        ctx.fillStyle = isReady ? '#fef08a' : '#e9d5ff';
+        ctx.beginPath();
+        ctx.arc(bx, by, 2.5 + (i % 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // La Bruja del Bosque (NPC animado usando blink.png)
+      const elderImg = GAME.assets.elderWitch;
+      const elderX = cx + 45;
+      const elderY = cy;
+      const elderW = 48;
+      const elderH = 54;
+
+      if (elderImg) {
+        ctx.fillStyle = 'rgba(10, 4, 18, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(elderX, elderY - 2, 14, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const elderFrame = Math.floor(GAME.time * 5) % 6;
+        const sx = elderFrame * 32;
+        const sy = 0;
+
+        ctx.save();
+        ctx.translate(elderX, elderY);
+        ctx.scale(-1, 1);
+        ctx.drawImage(elderImg, sx, sy, 32, 36, -elderW / 2, -elderH, elderW, elderH);
+        ctx.restore();
+      }
+
+      if (isReady) {
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('¡TOCA EL CALDERO!', cx, cy - 65);
+      } else {
+        ctx.fillStyle = '#fef08a';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Necesitas las 5 Setas de Oro', cx, cy - 58);
+      }
+
+      ctx.restore();
+    }
+
+    function drawWitch() {
+      let img = GAME.assets.witchIdle;
+      if (WITCH.state === 'RUN') img = GAME.assets.witchRun;
+      if (WITCH.state === 'JUMP') img = GAME.assets.witchJump;
+      if (!img) return;
+
+      const anim = WITCH.animations[WITCH.state.toLowerCase()];
+      const sx = WITCH.frameIndex * anim.frameW;
+      const sy = 0;
+      const breatheY = WITCH.state === 'IDLE' ? Math.sin(GAME.time * 2.5) * 1.5 : 0;
+
+      ctx.save();
+      ctx.translate(Math.round(WITCH.x), Math.round(WITCH.y + breatheY));
+
+      if (!WITCH.facingRight) ctx.scale(-1, 1);
+
+      if (WITCH.onGround) {
+        ctx.fillStyle = 'rgba(10, 4, 18, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(0, -2, anim.renderW * 0.32, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.drawImage(
+        img,
+        sx, sy, anim.frameW, anim.frameH,
+        -anim.renderW / 2, -anim.renderH,
+        anim.renderW, anim.renderH
+      );
+
+      ctx.restore();
+    }
+
+    // Bucle Principal (60 Hz Fixed Timestep)
+    let lastTime = performance.now();
+    let accumulator = 0;
+    const FIXED_DT = 1 / 60;
+
+    function loop(currentTime) {
+      const frameDelta = Math.min((currentTime - lastTime) / 1000, 0.08);
+      lastTime = currentTime;
+      GAME.time += frameDelta;
+      accumulator += frameDelta;
+
+      while (accumulator >= FIXED_DT) {
+        updatePhysics();
+        accumulator -= FIXED_DT;
+      }
+      updateSparkles();
+
+      ctx.clearRect(0, 0, GAME.width, GAME.height);
+      drawScene();
+
+      requestAnimationFrame(loop);
+    }
+
+    // ==========================================
+    // CONFIGURACIÓN DE CONTROLES Y EVENTOS
+    // ==========================================
+    function setupControls() {
+      const startAudio = () => {
+        AUDIO.init();
+        if (AUDIO.musicEnabled && !AUDIO.musicPlaying) AUDIO.startMusic();
+      };
+
+      // Teclado
+      window.addEventListener('keydown', (e) => {
+        startAudio();
+        if (GAME.gameState === 'DIALOGUE') {
+          if (e.key === ' ' || e.key === 'Enter') advanceDialogue();
+          return;
+        }
+
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+          GAME.inputs.left = true;
+          document.getElementById('btnLeft').classList.add('active');
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+          GAME.inputs.right = true;
+          document.getElementById('btnRight').classList.add('active');
+        }
+        if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') {
+          if (!GAME.inputs.jump) GAME.inputs.jumpPressed = true;
+          GAME.inputs.jump = true;
+          document.getElementById('btnJump').classList.add('active');
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+          GAME.inputs.left = false;
+          document.getElementById('btnLeft').classList.remove('active');
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+          GAME.inputs.right = false;
+          document.getElementById('btnRight').classList.remove('active');
+        }
+        if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') {
+          GAME.inputs.jump = false;
+          document.getElementById('btnJump').classList.remove('active');
+        }
+      });
+
+      // Táctiles móviles
+      const bindBtn = (id, key, isJump = false) => {
+        const btn = document.getElementById(id);
+        const onStart = (e) => {
+          e.preventDefault();
+          startAudio();
+          if (isJump) {
+            if (!GAME.inputs.jump) GAME.inputs.jumpPressed = true;
+            GAME.inputs.jump = true;
+          } else {
+            GAME.inputs[key] = true;
+          }
+          btn.classList.add('active');
+        };
+        const onEnd = (e) => {
+          e.preventDefault();
+          if (isJump) GAME.inputs.jump = false;
+          else GAME.inputs[key] = false;
+          btn.classList.remove('active');
+        };
+
+        btn.addEventListener('touchstart', onStart, { passive: false });
+        btn.addEventListener('touchend', onEnd, { passive: false });
+        btn.addEventListener('touchcancel', onEnd, { passive: false });
+        btn.addEventListener('mousedown', onStart);
+        btn.addEventListener('mouseup', onEnd);
+        btn.addEventListener('mouseleave', onEnd);
+      };
+
+      bindBtn('btnLeft', 'left');
+      bindBtn('btnRight', 'right');
+      bindBtn('btnJump', 'jump', true);
+
+      // Comenzar en Pantalla de Inicio (botón o tocar cualquier parte de la pantalla)
+      const handleStartGame = () => {
+        startAudio();
+        // Intentar pantalla completa automáticamente en móvil si está disponible
+        const elem = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {});
+          else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        }
+        titleScreen.style.display = 'none';
+        GAME.gameState = 'DIALOGUE';
+        startDialogueSequence();
+      };
+      btnStartGame.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleStartGame();
+      });
+      titleScreen.addEventListener('click', handleStartGame);
+
+      // Avanzar Diálogos al tocar en pantalla
+      dialogueOverlay.addEventListener('click', (e) => {
+        if (e.target === btnSkipDialogue) return;
+        advanceDialogue();
+      });
+
+      // Omitir diálogos
+      btnSkipDialogue.addEventListener('click', (e) => {
+        e.stopPropagation();
+        endDialogueSequence();
+      });
+
+      // Continuar nivel
+      btnNextLevel.addEventListener('click', () => {
+        startAudio();
+        if (GAME.currentLevelIndex === 0) setLevel(1);
+        else if (GAME.currentLevelIndex === 1) setLevel(2);
+      });
+
+      btnReplay.addEventListener('click', () => {
+        startAudio();
+        setLevel(GAME.currentLevelIndex);
+      });
+
+      // Jugar de nuevo desde el pergamino final
+      btnReplayAll.addEventListener('click', () => {
+        startAudio();
+        setLevel(0);
+      });
+
+      // Música
+      musicBtn.addEventListener('click', () => {
+        AUDIO.init();
+        AUDIO.musicEnabled = !AUDIO.musicEnabled;
+        if (AUDIO.musicEnabled) {
+          AUDIO.startMusic();
+          musicBtn.innerHTML = '<span>🎵</span> Música: ON';
+        } else {
+          AUDIO.stopMusic();
+          musicBtn.innerHTML = '<span>🔇</span> Música: OFF';
+        }
+      });
+
+      // Sonido
+      soundBtn.addEventListener('click', () => {
+        AUDIO.init();
+        AUDIO.sfxEnabled = !AUDIO.sfxEnabled;
+        soundBtn.innerHTML = AUDIO.sfxEnabled ? '<span>🔊</span> Sonido: ON' : '<span>🔇</span> Sonido: OFF';
+      });
+
+      // Pantalla Completa
+      fullscreenBtn.addEventListener('click', () => {
+        startAudio();
+        const elem = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (elem.requestFullscreen) elem.requestFullscreen();
+          else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+      });
+    }
+
+    // Pre-procesar assets pesados una sola vez
+    function prepareCachedAssets() {
+      if (GAME.assets.bgCavernas) {
+        try {
+          const orig = GAME.assets.bgCavernas;
+          const targetH = GAME.height;
+          const targetW = Math.round(orig.width * (targetH / orig.height));
+          const offCanvas = document.createElement('canvas');
+          offCanvas.width = targetW;
+          offCanvas.height = targetH;
+          const offCtx = offCanvas.getContext('2d');
+          offCtx.drawImage(orig, 0, 0, targetW, targetH);
+          GAME.assets.bgCavernasOptimized = offCanvas;
+        } catch (e) {
+          console.warn('Fallback bgCavernas:', e);
+        }
+      }
+
+      if (GAME.assets.bloque && GAME.assets.dirt) {
+        try {
+          const cBlock = document.createElement('canvas');
+          cBlock.width = 40; cBlock.height = 32;
+          const cbCtx = cBlock.getContext('2d');
+          cbCtx.filter = 'hue-rotate(135deg) brightness(0.85) contrast(1.15)';
+          cbCtx.drawImage(GAME.assets.bloque, 0, 0);
+
+          const cDirt = document.createElement('canvas');
+          cDirt.width = 40; cDirt.height = 32;
+          const cdCtx = cDirt.getContext('2d');
+          cdCtx.filter = 'hue-rotate(135deg) brightness(0.85) contrast(1.15)';
+          cdCtx.drawImage(GAME.assets.dirt, 0, 0);
+
+          GAME.assets.bloqueCristal = cBlock;
+          GAME.assets.dirtCristal = cDirt;
+
+          const gBlock = document.createElement('canvas');
+          gBlock.width = 40; gBlock.height = 32;
+          const gbCtx = gBlock.getContext('2d');
+          gbCtx.filter = 'hue-rotate(310deg) saturate(1.4) brightness(1.1)';
+          gbCtx.drawImage(GAME.assets.bloque, 0, 0);
+
+          const gDirt = document.createElement('canvas');
+          gDirt.width = 40; gDirt.height = 32;
+          const gdCtx = gDirt.getContext('2d');
+          gdCtx.filter = 'hue-rotate(310deg) saturate(1.3) brightness(1.05)';
+          gdCtx.drawImage(GAME.assets.dirt, 0, 0);
+
+          GAME.assets.bloqueOro = gBlock;
+          GAME.assets.dirtOro = gDirt;
+        } catch (e) {
+          console.warn('Fallback bloques:', e);
+        }
+      }
+    }
+
+    // Iniciar el juego
+    loadAssets()
+      .then(() => {
+        GAME.loaded = true;
+        prepareCachedAssets();
+        setupControls();
+        setLevel(0);
+        requestAnimationFrame(loop);
+      })
+      .catch(err => {
+        statusToast.style.borderColor = '#ef4444';
+        statusToast.style.color = '#fca5a5';
+        statusToast.innerHTML = '❌ ' + err.message;
+      });
+
+    // Registrar Service Worker para soporte PWA Offline
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('SW no registrado (normal en file://):', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tarjeta de Regalo Imprimible - El Bosque Secreto de Sara</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #1a162b;
+      font-family: 'Georgia', serif;
+      color: #3b1b54;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .controls-panel {
+      background: #2a2245;
+      color: #f3e8ff;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .controls-panel input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #c084fc;
+      background: #150f26;
+      color: #fff;
+      font-size: 15px;
+      margin: 10px 0;
+    }
+    .btn-print {
+      background: #9333ea;
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-print:hover {
+      background: #a855f7;
+    }
+
+    /* Tarjeta para imprimir */
+    .card-to-print {
+      width: 148mm;
+      min-height: 105mm; /* Tamaño A6 apaisado estándar */
+      background: #fbf5e6;
+      border: 4px double #7e22ce;
+      border-radius: 16px;
+      padding: 24px 30px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .card-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .card-badge {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #9333ea;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .card-title {
+      font-size: 24px;
+      color: #4c1d95;
+      font-weight: bold;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    .card-desc {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #4a385c;
+      margin-bottom: 16px;
+    }
+    .card-instructions {
+      font-size: 11px;
+      color: #7e22ce;
+      font-style: italic;
+      background: rgba(147, 51, 234, 0.08);
+      padding: 8px 12px;
+      border-left: 3px solid #9333ea;
+      border-radius: 4px;
+    }
+    .card-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 140px;
+    }
+    .qr-container {
+      background: #fff;
+      padding: 10px;
+      border: 2px solid #c084fc;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-container img {
+      width: 128px;
+      height: 128px;
+      display: block;
+    }
+    .qr-label {
+      font-size: 11px;
+      color: #6b21a8;
+      font-weight: bold;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    @media print {
+      body {
+        background: transparent;
+        padding: 0;
+      }
+      .controls-panel {
+        display: none !important;
+      }
+      .card-to-print {
+        box-shadow: none;
+        border: 2px solid #7e22ce;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="controls-panel">
+    <h3>Generador de Tarjeta de Regalo</h3>
+    <p style="font-size: 13px; opacity: 0.8; margin-top: 4px;">Pega aquí el enlace de tu juego (de Vercel, GitHub Pages o tu servidor local) y pulsa Imprimir.</p>
+    <input type="text" id="urlInput" value="https://el-bosque-de-sara.vercel.app" placeholder="https://tu-enlace-del-juego.com">
+    <button class="btn-print" onclick="window.print()">Imprimir Tarjeta</button>
+  </div>
+
+  <div class="card-to-print">
+    <div class="card-left">
+      <div class="card-badge">Especial Amigo Invisible</div>
+      <div class="card-title">El Bosque Secreto de Sara</div>
+      <div class="card-desc">
+        Un pequeño videojuego mágico de plataformas creado especialmente para ti. Adéntrate en el bosque, reúne las setitas sagradas y descubre qué sortilegio aguarda en el caldero.
+      </div>
+      <div class="card-instructions">
+        Escanea el código QR con la cámara de tu móvil para iniciar tu aventura.
+      </div>
+    </div>
+    <div class="card-right">
+      <div class="qr-container">
+        <img id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://el-bosque-de-sara.vercel.app" alt="Código QR">
+      </div>
+      <div class="qr-label">¡Escanea y juega!</div>
+    </div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    const qrImg = document.getElementById('qrImg');
+    urlInput.addEventListener('input', () => {
+      const val = encodeURIComponent(urlInput.value.trim() || 'https://el-bosque-de-sara.vercel.app');
+      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${val}`;
+    });
+  </script>
+</body>
+</html>
